@@ -1,10 +1,10 @@
-"""
+'''
 !Python3 
 Eric Rivetna - Data Scientist 
 Lambda School Project: QuikHire.io
 
 Initial WebScraper for QuikHire.io - Indeed
-"""
+'''
 
 #Webscraping Libraries
 import requests
@@ -12,9 +12,10 @@ import bs4
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+import time
 
 #Data Libraries
-"""Check to remove unused Libraries"""
+'''Check to remove unused Libraries'''
 import pandas as pd
 import numpy as np
 import time 
@@ -61,97 +62,82 @@ def url_list():
     'Columbus':'Ohio','Durham-Chapel Hill':'North Carolina','Boulder':'Colorado','Boston':'MA','Colorado Springs':'Colorado',
     'San Diego':'California','Jacksonville':'Florida','Tampa':'Florida','Baltimore':'Maryland',}
             
-    data_set = {'Data Science', 'Business Intelligence', 'Data Analyst', 'Data Engineer','Machine Learning'}
-    software_web_set = {'Software Engineer', 'Front-End Developer', 'Back-End Developer'}
-    design_set = {'UX Designer', 'Product Designer'}
+    data_list = ['Data+Scientist', 'Business+Intelligence', 'Data+Analyst', 'Data+Engineer','Machine+Learning']
+    software_web_list = ['Software+Engineer', 'Front-End+Developer', 'Back-End+Developer']
+    design_list = ['UX+Designer', 'Product+Designer']
     
     data_url = []
     sw_url = []
     ux_url = []
     
-    for i in data_set:
+    for i in data_list:
         for k,v in tech_cities.items():
             data_url.append('https://www.indeed.com/jobs?q={}&l={}%2C+{}'.format(i,k,v))
 
-    for s in software_web_set:
+    for s in software_web_list:
         for k,v in tech_cities.items():
             sw_url.append('https://www.indeed.com/jobs?q={}&l={}%2C+{}'.format(s,k,v))
 
-    for p in design_set:
+    for p in design_list:
         for k,v in tech_cities.items():
             ux_url.append('https://www.indeed.com/jobs?q={}&l={}%2C+{}'.format(p,k,v))
+
+
+
+   
     
     return data_url, sw_url, ux_url
 
-def url_test():
+data_url, sw_url, ux_url = url_list()
 
-    data_url, sw_url, ux_url = url_list()
-
-    for url in data_url:
-        for i in range(0,10,10):
-            print(url+'&start='+str(i))
-            page = requests.get(url)
-            soup = BeautifulSoup(page.text, "html.parser")
-            soup.prettify()
-
+def job_summary_sel(urlList):
     
-
-
-url_test()
-
-
-
-
-def job_summary_sel(url_list):
+    df = pd.DataFrame(columns=['Title','Location','Company','Salary','Sponsored','Description','Days Posted'])
     
-    df = pd.DataFrame(columns=["Title","Location","Company","Salary","Sponsored","Description","Days Posted"])
-    
-    data_url, sw_url, ux_url = url_list()
-    
-    # chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
     driver = webdriver.Chrome('./chromedriver')  
     
-    for url in url_list:
-        page = requests.get(url)
-        soup = BeautifulSoup(page.text, "html.parser")
+    for url in urlList:
         for i in range(0,500,10):
+            page = requests.get(url)
+            soup = BeautifulSoup(page.text, 'html.parser')
             driver.get(url+'&start='+str(i))
             driver.implicitly_wait(8)
+            
             all_jobs = driver.find_elements_by_class_name('result')
+            
             for job in all_jobs:
                 result_html = job.get_attribute('innerHTML')
-                soup_func = BeautifulSoup(result_html, 'html.parser')
+                soup = BeautifulSoup(result_html, 'html.parser')
                 
                 try:
-                    title = soup_func.find("a", class_="jobtitle").text.replace('\n','')
+                    title = soup.find('a', class_='jobtitle').text.replace('\n','')
                 except:
                     title = 'None'
                     
                 try:
-                    location = soup_func.find(class_="location").text.replace('\n','')
+                    location = soup.find(class_='location').text.replace('\n','')
                 except:
                     location = 'None'
                     
                 try:
-                    company = soup_func.find(class_="company").text.replace('\n','')
+                    company = soup.find(class_='company').text.replace('\n','')
                 except:
                     company = 'None'
                     
                 try:
-                    salary = soup_func.find(class_="salaryText").text.replace('\n','')
+                    salary = soup.find(class_='salaryText').text.replace('\n','')
                 except:
                     salary = 'None'
                     
                 try: 
-                    sponsored = soup.find(class_="sponsoredGray").text
+                    sponsored = soup.find(class_='sponsoredGray').text
                 except:
-                    sponsored = "Organic"
+                    sponsored = 'Organic'
                         
-                sum_div = job.find_elements_by_class_name("summary")[0]
+                sum_div = job.find_elements_by_class_name('summary')[0]
 
                 try: 
-                    days = soup_func.find(class_="date").text.replace('\n','')
+                    days = soup.find(class_='date').text.replace('\n','')
                 except:
                     days = 'None'
                     
@@ -161,39 +147,51 @@ def job_summary_sel(url_list):
                      close_popup = driver.find_element_by_class_name('popover-x-button-close')
                      close_popup.click()
                      sum_div.click()
-
+                pass
+                
                 try:
                     job_desc = driver.find_element_by_id('vjs-desc').text
                 except:
                     job_desc = 'None'
                     
-                df = df.append({'Title':title,'Location':location,"Company":company,"Salary":salary,
-                "Sponsored":sponsored,"Description":job_desc, "Days Posted":days}, ignore_index=True)
+                df = df.append({'Title':title,'Location':location,'Company':company,'Salary':salary,
+                'Sponsored':sponsored,'Description':job_desc, 'Days Posted':days,'url':url}, ignore_index=True)
 
                 df.to_csv('DB_Check.csv', index=False)
 
-                driver.close()
+           
 
 
 
 
         
-# job_summary_sel()
+job_summary_sel(data_url)
+
+time.sleep(20)
+
+job_summary_sel(sw_url)
+
+time.sleep(20)
+
+job_summary_sel(ux_url)
+
+
+
 
 
 
 # def job_title(soup):
 #     print(soup.prettify())
 #     jobs = []
-#     for div in soup.find_all(name="div", attrs={"class":"row"}):
-#         for a in div.find_all(name="a", attrs={"data-tn-element":"jobTitle"}):
-#             jobs.append(a["title"])
+#     for div in soup.find_all(name='div', attrs={'class':'row'}):
+#         for a in div.find_all(name='a', attrs={'data-tn-element':'jobTitle'}):
+#             jobs.append(a['title'])
 #     return jobs
 
 # def company_name(soup):
 #     companies = []
-#     for i in soup.find_all(name="div", attrs={"class":"row"}):
-#         company = i.find_all(name="span", attrs={"class":"company"})
+#     for i in soup.find_all(name='div', attrs={'class':'row'}):
+#         company = i.find_all(name='span', attrs={'class':'company'})
 #         for a in company:
 #             companies.append(a.text.strip())
     
@@ -201,7 +199,7 @@ def job_summary_sel(url_list):
 
 # def location_name(soup):
 #     locations = []
-#     spans = soup.find_all(name="div", attrs={"class":"location"})
+#     spans = soup.find_all(name='div', attrs={'class':'location'})
 #     for g in spans:
 #         locations.append(g.text.strip())
     
@@ -209,7 +207,7 @@ def job_summary_sel(url_list):
 
 # def summary(soup):
 #     summaries = []
-#     div = soup.find_all(name="div", attrs={"class":"summary"})
+#     div = soup.find_all(name='div', attrs={'class':'summary'})
 #     for li in div:
 #         summaries.append(li.text.strip())
     
